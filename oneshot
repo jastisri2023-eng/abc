@@ -1,0 +1,159 @@
+git init 
+git add . 
+git commit -m "Initial Java CI/CD commit 
+git branch -M main 
+git remote add origin https://github.com/your-reponame/simple-java-app.git 
+git push -u origin main
+--------------------------------------------------------------------------
+docker build -t 23mis0105/java-test-app:latest .
+docker login
+docker push 23mis0105/java-test-app:latest
+docker images
+=============================================================================
+kubectl apply -f deployment.yaml
+kubectl get svc
+POM.XML===================================================================
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+http://maven.apache.org/xsd/maven-4.0.0.xsd"> 
+<modelVersion>4.0.0</modelVersion> 
+<groupId>com.demo</groupId> 
+<artifactId>test-java-app</artifactId> 
+<version>1.0</version> 
+<packaging>jar</packaging> 
+<name>test-java-app</name> 
+<properties> 
+<maven.compiler.source>17</maven.compiler.source> 
+<maven.compiler.target>17</maven.compiler.target> 
+<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+<junit.version>5.10.1</junit.version> 
+</properties> 
+<dependencies> 
+<dependency> 
+<groupId>org.junit.jupiter</groupId> 
+<artifactId>junit-jupiter</artifactId> 
+<version>${junit.version}</version> 
+<scope>test</scope> 
+</dependency> 
+</dependencies> 
+<build> 
+<plugins> 
+<plugin> 
+<groupId>org.apache.maven.plugins</groupId> 
+<artifactId>maven-compiler-plugin</artifactId> 
+<version>3.11.0</version> 
+</plugin> 
+<plugin> 
+<groupId>org.apache.maven.plugins</groupId> 
+<artifactId>maven-surefire-plugin</artifactId> 
+<version>3.2.5</version> 
+<configuration> 
+<useModulePath>false</useModulePath> 
+</configuration> 
+</plugin> 
+<plugin> 
+<groupId>org.apache.maven.plugins</groupId> 
+<artifactId>maven-jar-plugin</artifactId> 
+<version>3.4.1</version> 
+<configuration> 
+<archive> 
+<manifest> 
+<mainClass>App</mainClass> 
+</manifest> 
+</archive> 
+</configuration> 
+</plugin> 
+</plugins> 
+</build> 
+</project>
+======================================================================
+JENKINS
+pipeline { 
+agent any 
+environment { 
+DOCKER_IMAGE = "23mis0105/java-app:latest" 
+} 
+stages { 
+stage('Clone Repository') { 
+steps { 
+git branch: 'main', 
+url: 'https://github.com/jastisri2023-eng/abc.git' 
+} 
+} 
+stage('Build with Maven') { 
+steps { 
+bat 'mvn clean package' 
+} 
+} 
+stage('Build Docker Image') { 
+steps { 
+bat "docker build -t %DOCKER_IMAGE% ." 
+} 
+} 
+stage('Push to DockerHub') { 
+steps { 
+withCredentials([usernamePassword( 
+credentialsId: 'dockerhub-cred', 
+usernameVariable: 'DOCKER_USER', 
+passwordVariable: 'DOCKER_PASS' 
+)]) { 
+bat """ 
+docker login -u %DOCKER_USER% -p %DOCKER_PASS% 
+docker push %DOCKER_IMAGE% 
+""" 
+} 
+} 
+} 
+stage('Deploy to Kubernetes') { 
+steps { 
+bat 'kubectl apply -f deployment.yaml' 
+} 
+} 
+} 
+post { 
+success { 
+echo 'CI/CD Pipeline executed successfully!' 
+} 
+failure { 
+echo 'Pipeline failed. Please check logs.' 
+} 
+} 
+}
+DOCKERFILE==================================================
+FROM eclipse-temurin:17-jdk
+WORKDIR /app
+COPY target/test-java-app-1.0.jar app.jar
+CMD ["java", "-jar", "app.jar"]
+=================================================================
+deployment.yaml
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: java-app 
+spec: 
+  replicas: 2 
+  selector: 
+    matchLabels: 
+      app: java-app 
+  template: 
+    metadata: 
+      labels: 
+        app: java-app 
+    spec: 
+      containers: 
+      - name: java-app 
+        image: 23mis0105/java-app:latest --- 
+apiVersion: v1 
+kind: Service 
+metadata: 
+  name: java-service 
+spec: 
+  type: NodePort 
+  selector: 
+    app: java-app 
+  ports: 
+    - port: 80 
+      targetPort: 8080 
+      nodePort: 30008
+
